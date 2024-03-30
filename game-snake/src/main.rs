@@ -35,6 +35,7 @@ struct Location {
 struct Snake {
     direction: Direction,
     locations: Vec<Location>,
+    grow: bool,
 }
 struct Gold {
     exist: bool,
@@ -62,6 +63,7 @@ fn draw(mut sc: &mut Stdout, world: &mut World) {
             && world.golds[i].location.y == world.snake.locations[0].y
         {
             world.golds[i].exist = false;
+            world.snake.grow = true;
         }
     }
 
@@ -90,6 +92,12 @@ fn draw(mut sc: &mut Stdout, world: &mut World) {
 
 fn pysics(world: &mut World) {
     let mut rng = rand::thread_rng();
+
+    // add snake size
+    if world.snake.grow {
+        world.snake.grow = false;
+        world.snake.locations.push(Location { x: 0, y: 0 });
+    }
 
     // move snake (body)
     for i in (1..world.snake.locations.len()).rev() {
@@ -162,6 +170,7 @@ fn main() {
     let mut world = World {
         snake: Snake {
             direction: (Direction::Left),
+            grow: false,
             locations: vec![
                 Location {
                     x: maxX / 2,
