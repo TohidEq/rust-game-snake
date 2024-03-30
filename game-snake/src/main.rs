@@ -13,7 +13,7 @@ use std::{
 };
 
 use crossterm::event::{poll, read, Event};
-
+use crossterm::style::Stylize;
 use rand::Rng;
 
 // low number = more speed
@@ -57,7 +57,7 @@ fn draw(mut sc: &mut Stdout, world: &mut World) {
     for i in 0..world.golds.len() {
         sc.queue(MoveTo(world.golds[i].location.x, world.golds[i].location.y))
             .unwrap()
-            .queue(Print("+"))
+            .queue(Print("⊕".green().on_green()))
             .unwrap();
         if world.golds[i].location.x == world.snake.locations[0].x
             && world.golds[i].location.y == world.snake.locations[0].y
@@ -73,9 +73,12 @@ fn draw(mut sc: &mut Stdout, world: &mut World) {
             world.snake.locations[i].x,
             world.snake.locations[i].y,
         ))
-        .unwrap()
-        .queue(Print("#"))
         .unwrap();
+        if i % 2 != 0 {
+            sc.queue(Print(" ".red().on_black())).unwrap();
+        } else {
+            sc.queue(Print(" ".black().on_red())).unwrap();
+        }
     }
 
     // draw snake head
@@ -84,7 +87,7 @@ fn draw(mut sc: &mut Stdout, world: &mut World) {
         world.snake.locations[0].y,
     ))
     .unwrap()
-    .queue(Print("O"))
+    .queue(Print("O".red().on_red()))
     .unwrap();
 
     sc.flush().unwrap();
