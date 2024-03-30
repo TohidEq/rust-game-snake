@@ -18,11 +18,8 @@ use rand::Rng;
 
 // low number = more speed
 const GAME_SPEED: u64 = 200;
+const GOLD_MAX: u16 = 4;
 
-struct Location {
-    x: u16,
-    y: u16,
-}
 #[derive(PartialEq, Eq)]
 enum Direction {
     Left,
@@ -30,9 +27,18 @@ enum Direction {
     Up,
     Down,
 }
+
+struct Location {
+    x: u16,
+    y: u16,
+}
 struct Snake {
     direction: Direction,
     locations: Vec<Location>,
+}
+struct Gold {
+    exist: bool,
+    location: Location,
 }
 
 struct World {
@@ -40,10 +46,24 @@ struct World {
     maxX: u16,
     maxY: u16,
     play: bool,
+    golds: Vec<Gold>,
 }
 
 fn draw(mut sc: &mut Stdout, world: &mut World) {
     sc.queue(Clear(crossterm::terminal::ClearType::All));
+
+    // draw golds
+    for i in 0..world.golds.len() {
+        sc.queue(MoveTo(world.golds[i].location.x, world.golds[i].location.y))
+            .unwrap()
+            .queue(Print("+"))
+            .unwrap();
+        if world.golds[i].location.x == world.snake.locations[0].x
+            && world.golds[i].location.y == world.snake.locations[0].y
+        {
+            world.golds[i].exist = false;
+        }
+    }
 
     // draw snake head body
     for i in 1..(world.snake.locations.len()) {
@@ -69,7 +89,7 @@ fn draw(mut sc: &mut Stdout, world: &mut World) {
 }
 
 fn pysics(world: &mut World) {
-    let newLocations: Vec<Location> = vec![];
+    let mut rng = rand::thread_rng();
 
     // move snake (body)
     for i in (1..world.snake.locations.len()).rev() {
@@ -105,6 +125,27 @@ fn pysics(world: &mut World) {
                 world.snake.locations[0].y += 1;
             } else {
                 world.snake.locations[0].y = 0;
+            }
+        }
+    }
+
+    // gold init
+    if world.golds.len() < GOLD_MAX as usize {
+        let new_x = rng.gen_range(0..world.maxX);
+        let new_y = rng.gen_range(0..world.maxY);
+        world.golds.push(Gold {
+            exist: true,
+            location: Location { x: new_x, y: new_y },
+        });
+    }
+
+    for i in 0..world.golds.len() {
+        if world.golds[i].exist == false {
+            let new_x = rng.gen_range(0..world.maxX);
+            let new_y = rng.gen_range(0..world.maxY);
+            world.golds[i] = Gold {
+                exist: true,
+                location: Location { x: new_x, y: new_y },
             }
         }
     }
@@ -150,6 +191,7 @@ fn main() {
         },
         maxX: maxX,
         maxY: maxY,
+        golds: Vec::new(),
         play: true,
     };
 
