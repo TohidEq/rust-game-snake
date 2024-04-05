@@ -1,22 +1,18 @@
 use crossterm::{
     cursor::{Hide, MoveTo, Show},
-    event::{self, KeyCode},
-    execute,
-    style::{Color, Print, ResetColor, SetBackgroundColor, SetForegroundColor},
-    terminal::{disable_raw_mode, enable_raw_mode, size, Clear, ScrollUp, SetSize},
-    ExecutableCommand, QueueableCommand,
+    event::KeyCode,
+    style::Print,
+    terminal::{disable_raw_mode, enable_raw_mode, size, Clear},
+    QueueableCommand,
 };
-use std::{io, thread, time};
-use std::{
-    io::{stdout, Result, Stdout, Write},
-    os::linux::raw::stat,
-};
+use std::io::{Stdout, Write};
+use std::{thread, time};
 
 use crossterm::event::{poll, read, Event};
 use crossterm::style::Stylize;
 use rand::Rng;
 
-// low number = more speed
+// low number = more speed⊕
 const GAME_SPEED: u64 = 200;
 const GOLD_MAX: u16 = 4;
 
@@ -50,15 +46,35 @@ struct World {
     golds: Vec<Gold>,
 }
 
+fn draw_f(
+    x: u16,
+    y: u16,
+    text: crossterm::style::StyledContent<&str>,
+    mut sc: &mut Stdout,
+    world: &mut World,
+) {
+    sc.queue(MoveTo(x * 2, y))
+        .unwrap()
+        .queue(Print(text))
+        .unwrap()
+        .queue(MoveTo(x * 2 + 1, y))
+        .unwrap()
+        .queue(Print(text))
+        .unwrap();
+}
+
 fn draw(mut sc: &mut Stdout, world: &mut World) {
     sc.queue(Clear(crossterm::terminal::ClearType::All));
 
     // draw golds
     for i in 0..world.golds.len() {
-        sc.queue(MoveTo(world.golds[i].location.x, world.golds[i].location.y))
-            .unwrap()
-            .queue(Print("⊕".green().on_green()))
-            .unwrap();
+        draw_f(
+            world.golds[i].location.x,
+            world.golds[i].location.y,
+            "⊕".green().on_green(),
+            sc,
+            world,
+        );
         if world.golds[i].location.x == world.snake.locations[0].x
             && world.golds[i].location.y == world.snake.locations[0].y
         {
@@ -69,26 +85,28 @@ fn draw(mut sc: &mut Stdout, world: &mut World) {
 
     // draw snake head body
     for i in 1..(world.snake.locations.len()) {
-        sc.queue(MoveTo(
+        let mut text = " ".black().on_red();
+        if i % 2 != 0 {
+            text = " ".red().on_black();
+        }
+
+        draw_f(
             world.snake.locations[i].x,
             world.snake.locations[i].y,
-        ))
-        .unwrap();
-        if i % 2 != 0 {
-            sc.queue(Print(" ".red().on_black())).unwrap();
-        } else {
-            sc.queue(Print(" ".black().on_red())).unwrap();
-        }
+            text,
+            sc,
+            world,
+        );
     }
 
     // draw snake head
-    sc.queue(MoveTo(
+    draw_f(
         world.snake.locations[0].x,
         world.snake.locations[0].y,
-    ))
-    .unwrap()
-    .queue(Print("O".red().on_red()))
-    .unwrap();
+        "O".red().on_red(),
+        sc,
+        world,
+    );
 
     sc.flush().unwrap();
 }
@@ -164,11 +182,12 @@ fn pysics(world: &mut World) {
 
 fn main() {
     // init screen
-    let mut sc: Stdout = stdout();
-    let (maxX, maxY) = size().unwrap();
-
+    let mut sc: Stdout = std::io::stdout();
+    let (maxX_fake, maxY_fake) = size().unwrap();
+    let maxX = maxX_fake / 2 - 1;
+    let maxY = maxY_fake - 2;
     enable_raw_mode().unwrap();
-    sc.execute(Hide).unwrap();
+    crossterm::ExecutableCommand::execute(&mut sc, Hide).unwrap();
 
     let mut world = World {
         snake: Snake {
@@ -266,5 +285,5 @@ fn main() {
     }
 
     disable_raw_mode().unwrap();
-    sc.execute(Show).unwrap();
+    crossterm::ExecutableCommand::execute(&mut sc, Show).unwrap();
 }
